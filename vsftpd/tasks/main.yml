@@ -1,0 +1,20 @@
+---
+- name: Instalar vsftpd
+  ansible.builtin.zypper:
+    name: "{{ vsftpd_package }}"
+    state: present
+
+- name: Copiar archivo de configuración de vsftpd
+  ansible.builtin.template:
+    src: vsftpd.conf
+    dest: /etc/vsftpd.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reiniciar vsftpd
+
+- name: Habilitar y arrancar el servicio vsftpd
+  ansible.builtin.systemd:
+    name: "{{ vsftpd_service }}"
+    enabled: yes
+    state: started
