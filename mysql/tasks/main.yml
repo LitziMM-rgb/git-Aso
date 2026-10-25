@@ -17,6 +17,8 @@
   community.mysql.mysql_user:
     name: root
     password: "{{ vault_mariadb_root_password }}"
+    login_user: root
+    login_password: "{{ vault_mariadb_root_password }}"
     login_unix_socket: "{{ mariadb_socket }}"
     check_implicit_admin: yes
   no_log: true

@@ -1,0 +1,10 @@
+---
+postgresql_packages:
+  - postgresql-server
+  - postgresql-contrib
+  - python313-psycopg2
+postgresql_service: postgresql
+pg_data_dir: /var/lib/pgsql/data
+pg_db_name: appdb_pg
+pg_db_user: pguser
+pg_allowed_network: 192.168.71.0/24
