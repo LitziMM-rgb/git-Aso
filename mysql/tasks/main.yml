@@ -1,0 +1,42 @@
+---
+- name: Instalar MariaDB y la librería de Python
+  ansible.builtin.zypper:
+    name:
+      - "{{ mariadb_package }}"
+      - "{{ mariadb_client_package }}"
+      - "{{ mariadb_python_package }}"
+    state: present
+
+- name: Habilitar y arrancar el servicio MariaDB
+  ansible.builtin.systemd:
+    name: "{{ mariadb_service }}"
+    enabled: yes
+    state: started
+
+- name: Poner contraseña al usuario root de MariaDB
+  community.mysql.mysql_user:
+    name: root
+    password: "{{ vault_mariadb_root_password }}"
+    login_unix_socket: "{{ mariadb_socket }}"
+    check_implicit_admin: yes
+  no_log: true
+
+- name: Crear la base de datos
+  community.mysql.mysql_db:
+    name: "{{ db_name }}"
+    state: present
+    login_user: root
+    login_password: "{{ vault_mariadb_root_password }}"
+    login_unix_socket: "{{ mariadb_socket }}"
+  no_log: true
+
+- name: Crear el usuario de la base de datos
+  community.mysql.mysql_user:
+    name: "{{ db_user }}"
+    password: "{{ vault_db_password }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+    login_user: root
+    login_password: "{{ vault_mariadb_root_password }}"
+    login_unix_socket: "{{ mariadb_socket }}"
+  no_log: true
