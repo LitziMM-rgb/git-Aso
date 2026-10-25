@@ -1,7 +1,9 @@
 ---
-- name: Instalar y configurar vsftpd y samba en openSUSE
+- name: Instalar y configurar vsftpd, samba, apache y php en openSUSE
   hosts: servidor
   become: yes
   roles:
     - vsftpd
     - samba
+    - apache
+    - php
