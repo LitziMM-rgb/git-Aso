@@ -4,6 +4,15 @@
     name: "{{ php_packages }}"
     state: present
 
+- name: Copiar configuración de phpMyAdmin para Apache
+  ansible.builtin.template:
+    src: phpmyadmin.conf
+    dest: /etc/apache2/conf.d/phpMyAdmin.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reiniciar apache
+
 - name: Comprobar si el módulo php está activo en Apache
   ansible.builtin.shell: "apache2ctl -M 2>/dev/null | grep -q php"
   register: php_modulo
