@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: LitziMM-rgb
+  description: Rol para instalar y configurar Apache
+  license: MIT
+  min_ansible_version: "2.9"
+dependencies: []

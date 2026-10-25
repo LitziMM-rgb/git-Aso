@@ -1,0 +1,11 @@
+---
+- name: Instalar Apache
+  ansible.builtin.zypper:
+    name: "{{ apache_package }}"
+    state: present
+
+- name: Habilitar y arrancar el servicio Apache
+  ansible.builtin.systemd:
+    name: "{{ apache_service }}"
+    enabled: yes
+    state: started
