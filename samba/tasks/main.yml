@@ -1,0 +1,44 @@
+---
+- name: Instalar Samba
+  ansible.builtin.zypper:
+    name: "{{ samba_package }}"
+    state: present
+
+- name: Crear usuario del sistema
+  ansible.builtin.user:
+    name: "{{ samba_user }}"
+    shell: /sbin/nologin
+    create_home: no
+
+- name: Crear directorio compartido
+  ansible.builtin.file:
+    path: "{{ samba_share_path }}"
+    state: directory
+    owner: "{{ samba_user }}"
+    mode: '0775'
+
+- name: Copiar archivo smb.conf
+  ansible.builtin.template:
+    src: smb.conf
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reiniciar samba
+
+- name: Comprobar si existe el usuario Samba
+  ansible.builtin.command: "pdbedit -L -u {{ samba_user }}"
+  register: samba_user_check
+  failed_when: false
+  changed_when: false
+
+- name: Crear usuario Samba
+  ansible.builtin.shell: "(echo '{{ vault_samba_password }}'; echo '{{ vault_samba_password }}') | smbpasswd -s -a {{ samba_user }}"
+  when: samba_user_check.rc != 0
+  no_log: true
+
+- name: Habilitar y arrancar el servicio Samba
+  ansible.builtin.systemd:
+    name: "{{ samba_service }}"
+    enabled: yes
+    state: started
