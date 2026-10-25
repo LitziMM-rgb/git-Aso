@@ -1,6 +1,7 @@
 ---
-- name: Instalar y configurar vsftpd en openSUSE
+- name: Instalar y configurar vsftpd y samba en openSUSE
   hosts: servidor
   become: yes
   roles:
     - vsftpd
+    - samba
