@@ -42,3 +42,10 @@
     name: "{{ samba_service }}"
     enabled: yes
     state: started
+
+- name: Abrir Samba en el firewall
+  ansible.posix.firewalld:
+    service: samba
+    permanent: yes
+    immediate: yes
+    state: enabled

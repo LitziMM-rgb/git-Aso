@@ -18,3 +18,10 @@
     name: "{{ vsftpd_service }}"
     enabled: yes
     state: started
+
+- name: Abrir FTP en el firewall
+  ansible.posix.firewalld:
+    service: ftp
+    permanent: yes
+    immediate: yes
+    state: enabled

@@ -9,3 +9,10 @@
     name: "{{ apache_service }}"
     enabled: yes
     state: started
+
+- name: Abrir el puerto HTTP en el firewall
+  ansible.posix.firewalld:
+    service: http
+    permanent: yes
+    immediate: yes
+    state: enabled
