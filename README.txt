@@ -10,7 +10,7 @@ b) PASOS RAPIDOS PARA EJECUTAR EL PROYECTO
    ssh-copy-id publica@IP_DESTINO
 5. git clone git@github.com:LitziMM-rgb/git-Aso.git
    cd git-Aso
-6. Poner la IP de la maquina destino en el archivo hosts, bajo [servidor].
+6. Poner la IP de la maquina destino en inventory/hosts.yml, bajo servidor.hosts.
 7. Tener la contrasena del vault (se entrega por separado).
 8. ansible-playbook playbook.yml --ask-become-pass --ask-vault-pass
    - BECOME password: contrasena de sudo del usuario en la maquina destino
@@ -61,12 +61,17 @@ c.3) Ansible y acceso SSH sin contrasena
     ansible servidor -m ping
 
 c.4) Archivos base
-- hosts (solo la IP, sin usuario ni contrasena):
-    [servidor]
-    192.168.71.131
+- inventory/hosts.yml (solo la IP, sin usuario ni contrasena):
+    all:
+      children:
+        servidor:
+          hosts:
+            servidor:
+              ansible_host: 192.168.71.131
 - ansible.cfg (usuario y mejora del tiempo de respuesta):
     [defaults]
-    inventory = hosts
+    inventory = inventory/hosts.yml
+    roles_path = roles
     remote_user = publica
     host_key_checking = False
     forks = 10
@@ -74,60 +79,64 @@ c.4) Archivos base
     pipelining = True
     ssh_args = -o ControlMaster=auto -o ControlPersist=60s
 
-c.5) Estructura de un rol (ejemplo vsftpd)
-    mkdir -p vsftpd/defaults vsftpd/handlers vsftpd/meta vsftpd/tasks vsftpd/templates
-- defaults/main.yml : variables del rol
-- tasks/main.yml    : tareas (instalar, copiar configuracion, activar servicio)
-- handlers/main.yml : acciones que se ejecutan si algo cambia (reiniciar servicio)
-- meta/main.yml     : datos del rol (git no sube carpetas vacias)
-- templates/        : archivos de configuracion (vsftpd.conf, smb.conf, etc.)
+c.5) Estructura del proyecto
+- inventory/group_vars/all/vars.yml : variables globales sin contrasenas
+- inventory/group_vars/all/vault*.yml: credenciales cifradas con Ansible Vault
+- roles/<rol>/tasks/main.yml : tareas (instalar, copiar configuracion, activar servicio)
+- roles/<rol>/handlers/main.yml : acciones que se ejecutan si algo cambia
+- roles/<rol>/meta/main.yml : metadatos del rol
+- roles/<rol>/templates/ : archivos de configuracion (vsftpd.conf.j2, smb.conf.j2, etc.)
 - playbook.yml:
     - name: Instalar y configurar los servicios
       hosts: servidor
       become: yes
       roles:
-        - vsftpd
+        - lamp
+        - mariadb
         - samba
-        - apache
-        - php
-        - mysql
+        - ftp
         - postgresql
 
 c.6) Contrasenas cifradas con ansible-vault
 - Crear un archivo con la contrasena en texto y cifrarlo:
-    mkdir -p group_vars/servidor
-    echo 'vault_samba_password: "CLAVE"' > group_vars/servidor/vault.yml
-    ansible-vault encrypt group_vars/servidor/vault.yml
-- Archivos de vault del proyecto (dentro de group_vars/servidor):
+    mkdir -p inventory/group_vars/all
+    echo 'vault_samba_password: "CLAVE"' > inventory/group_vars/all/vault.yml
+    ansible-vault encrypt inventory/group_vars/all/vault.yml
+- Archivos de vault del proyecto (dentro de inventory/group_vars/all):
     vault.yml     -> vault_samba_password
     vault_db.yml  -> vault_mariadb_root_password, vault_db_password
     vault_pg.yml  -> vault_pg_postgres_password, vault_pg_db_password
 - Todos se cifran con la MISMA contrasena de vault.
 - Ver el contenido de un archivo cifrado:
-    ansible-vault view group_vars/servidor/vault.yml
+    ansible-vault view inventory/group_vars/all/vault.yml
 - Un archivo cifrado empieza con: $ANSIBLE_VAULT;1.1;AES256
 
-c.7) Roles y como comprobar cada uno (se ejecutan desde la maestra)
-- vsftpd (FTP)
-    ssh publica@192.168.71.131 "systemctl is-active vsftpd"
+c.7) Comprobaciones del despliegue
+- Primero, desde la carpeta del proyecto en la maquina maestra, comprobar
+  inventario y conexion:
+    ansible-inventory --graph
+    ansible servidor -m ping
+- Comprobar la sintaxis del playbook (solicitara la contrasena de Vault):
+    ansible-playbook playbook.yml --syntax-check --ask-vault-pass
+- Despues de desplegar, comprobar los servicios desde la maestra:
+    ssh publica@192.168.71.131 "sudo systemctl is-active apache2 mariadb smb vsftpd postgresql"
+- FTP
     ssh publica@192.168.71.131 "rpm -q vsftpd"
 - samba (usuario del sistema, usuario Samba, directorio y create mask)
-    ssh publica@192.168.71.131 "systemctl is-active smb"
-    ssh publica@192.168.71.131 "grep -i mask /etc/samba/smb.conf"
+    ssh publica@192.168.71.131 "grep -E 'create mask|directory mask' /etc/samba/smb.conf"
     ssh publica@192.168.71.131 "ls -ld /srv/samba/compartido"
     ssh -t publica@192.168.71.131 "sudo pdbedit -L"
-- apache (servidor web, puerto 80 abierto)
-    ssh publica@192.168.71.131 "systemctl is-active apache2"
-- php (PHP, librerias para MySQL y PostgreSQL, phpMyAdmin)
+- LAMP (Apache, PHP, librerias para MariaDB y PostgreSQL, phpMyAdmin)
     ssh publica@192.168.71.131 "rpm -q php8 apache2-mod_php8 php8-mysql php8-pgsql phpMyAdmin"
-    curl -sI http://192.168.71.131/phpMyAdmin/ | head -1
-  (debe responder HTTP/1.1 200 OK)
-- mysql (MariaDB: contrasena de root, base de datos appdb, usuario appuser)
+    curl -I http://192.168.71.131/
+    curl -I http://192.168.71.131/phpMyAdmin/
+- MariaDB (base de datos appdb y usuario appuser)
     ssh -t publica@192.168.71.131 "mariadb -u root -p -e 'SHOW DATABASES;'"
-- postgresql (contrasena, usuario pguser, base appdb_pg, conexion remota con SSL)
-    ssh publica@192.168.71.131 "systemctl is-active postgresql"
-    ssh -t publica@192.168.71.131 "psql -h 127.0.0.1 -U pguser -d appdb_pg -c '\l'"
-    ssh -t publica@192.168.71.131 "psql -h 127.0.0.1 -U pguser -d appdb_pg -c 'SHOW ssl;'"
+- PostgreSQL (usuario pguser, base appdb_pg, acceso remoto cifrado)
+  Ejecutar desde otra maquina de la red con psql instalado. La IP de origen
+  debe estar dentro de pg_allowed_network en inventory/group_vars/all/vars.yml:
+    psql "host=192.168.71.131 port=5432 dbname=appdb_pg user=pguser sslmode=require" -W -c "SELECT ssl, version, cipher FROM pg_stat_ssl WHERE pid = pg_backend_pid();"
+  La columna ssl debe mostrar t. La contrasena se solicita de forma interactiva.
 - Puertos abiertos en el firewall de la maquina destino:
     ssh -t publica@192.168.71.131 "sudo firewall-cmd --list-services"
   (debe incluir ftp, http, samba, postgresql y ssh)
@@ -136,6 +145,12 @@ c.8) Ejecucion del playbook
     ansible-playbook playbook.yml --ask-become-pass --ask-vault-pass
 - Resultado esperado al final (PLAY RECAP): failed=0
 - ok = ya estaba asi; changed = hizo un cambio; failed = error
+- PostgreSQL inicializa su cluster cuando aun no existe, genera un certificado
+  autofirmado y configura el acceso remoto solo mediante conexiones SSL.
+- Si una comprobacion falla, revisar el estado y los registros del servicio en
+  el destino, por ejemplo:
+    sudo systemctl status postgresql
+    sudo journalctl -u postgresql -n 50 --no-pager
 
 c.9) Flujo de git (uno por cada avance)
     git add archivo_o_carpeta
@@ -145,24 +160,24 @@ c.9) Flujo de git (uno por cada avance)
 - git status debe terminar en: nothing to commit, working tree clean
 
 d) ROLES INCLUIDOS
-vsftpd      Servidor FTP
+lamp        Apache, PHP, librerias MariaDB/PostgreSQL y phpMyAdmin
+mariadb     MariaDB (contrasena de root, base de datos y usuario)
 samba       Recurso compartido (usuario del sistema, usuario Samba, directorio, create mask)
-apache      Servidor web
-php         PHP, librerias para MySQL y PostgreSQL, phpMyAdmin
-mysql       MariaDB (contrasena de root, base de datos y usuario)
+ftp         Servidor FTP (vsftpd)
 postgresql  PostgreSQL (contrasena, usuario, base de datos, conexion remota con SSL)
 
 e) PLANTILLAS
-vsftpd/templates/vsftpd.conf
-samba/templates/smb.conf
-php/templates/phpmyadmin.conf
-postgresql/templates/pg_hba.conf
+roles/ftp/templates/vsftpd.conf.j2
+roles/samba/templates/smb.conf.j2
+roles/lamp/templates/phpmyadmin.conf.j2
+roles/lamp/templates/phpinfo.php.j2
+roles/postgresql/templates/pg_hba.conf.j2
 
 f) MEJORAS
-- hosts sin usuario ni contrasena visibles (el usuario esta en ansible.cfg)
+- inventario sin usuario ni contrasena visibles (el usuario SSH esta en ansible.cfg)
 - ansible.cfg con pipelining y ControlPersist (mejor tiempo de respuesta)
 - Contrasenas en archivos cifrados con ansible-vault
-- Uso de roles de Ansible, uno por servicio
+- Uso de roles de Ansible para LAMP, MariaDB, Samba, FTP y PostgreSQL
 - Puertos del firewall abiertos desde los propios roles
 
 g) ERRORES COMUNES Y SOLUCION
@@ -170,7 +185,7 @@ g) ERRORES COMUNES Y SOLUCION
 - "Permission denied (publickey)" con GitHub: la clave no esta agregada en GitHub.
 - "No route to host": la maquina destino cambio de IP o esta apagada. Revisar con ip a.
 - phpMyAdmin da 404: falta la configuracion de Apache. Se soluciona con la plantilla
-  php/templates/phpmyadmin.conf.
+  roles/lamp/templates/phpmyadmin.conf.j2.
 - phpMyAdmin no responde desde otra maquina: el firewall bloquea el puerto 80.
 - El paquete python3-PyMySQL no existe en openSUSE 16.0: se llama python313-PyMySQL.
 - mysql falla la segunda vez: root ya tiene contrasena. Se pasa login_user y

@@ -1,0 +1,39 @@
+apache_package: apache2
+apache_service: apache2
+
+php_packages:
+  - php8
+  - apache2-mod_php8
+  - php8-mysql
+  - php8-pgsql
+  - php8-mbstring
+  - phpMyAdmin
+
+mariadb_package: mariadb
+mariadb_client_package: mariadb-client
+mariadb_python_package: python313-PyMySQL
+mariadb_service: mariadb
+mariadb_socket: /run/mysql/mysql.sock
+db_name: appdb
+db_user: appuser
+
+samba_package: samba
+samba_service: smb
+samba_user: sambauser
+samba_share_name: compartido
+samba_share_path: /srv/samba/compartido
+samba_create_mask: "0664"
+samba_directory_mask: "0775"
+
+vsftpd_package: vsftpd
+vsftpd_service: vsftpd
+
+postgresql_packages:
+  - postgresql-server
+  - postgresql-contrib
+  - python313-psycopg2
+postgresql_service: postgresql
+pg_data_dir: /var/lib/pgsql/data
+pg_db_name: appdb_pg
+pg_db_user: pguser
+pg_allowed_network: 192.168.71.0/24

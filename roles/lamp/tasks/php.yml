@@ -1,0 +1,25 @@
+---
+- name: Instalar PHP, librerías y phpMyAdmin
+  ansible.builtin.zypper:
+    name: "{{ php_packages }}"
+    state: present
+
+- name: Copiar configuración de phpMyAdmin para Apache
+  ansible.builtin.template:
+    src: phpmyadmin.conf.j2
+    dest: /etc/apache2/conf.d/phpMyAdmin.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reiniciar apache
+
+- name: Comprobar si el módulo php está activo en Apache
+  ansible.builtin.shell: "apache2ctl -M 2>/dev/null | grep -q php"
+  register: php_modulo
+  failed_when: false
+  changed_when: false
+
+- name: Activar el módulo php8 en Apache
+  ansible.builtin.command: a2enmod php8
+  when: php_modulo.rc != 0
+  notify: Reiniciar apache

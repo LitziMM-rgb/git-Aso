@@ -1,7 +1,0 @@
----
-galaxy_info:
-  author: LitziMM-rgb
-  description: Rol para instalar PHP, librerias de bases de datos y phpMyAdmin
-  license: MIT
-  min_ansible_version: "2.9"
-dependencies: []

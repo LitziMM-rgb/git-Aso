@@ -1,8 +1,0 @@
----
-mariadb_package: mariadb
-mariadb_client_package: mariadb-client
-mariadb_python_package: python313-PyMySQL
-mariadb_service: mariadb
-mariadb_socket: /run/mysql/mysql.sock
-db_name: appdb
-db_user: appuser

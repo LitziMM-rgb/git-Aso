@@ -1,8 +1,0 @@
----
-php_packages:
-  - php8
-  - apache2-mod_php8
-  - php8-mysql
-  - php8-pgsql
-  - php8-mbstring
-  - phpMyAdmin

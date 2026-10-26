@@ -1,11 +1,10 @@
 ---
-- name: Instalar y configurar vsftpd, samba, apache, php, mysql y postgresql en openSUSE
+- name: Instalar y configurar servicios en openSUSE
   hosts: servidor
-  become: yes
+  become: true
   roles:
-    - vsftpd
+    - lamp
+    - mariadb
     - samba
-    - apache
-    - php
-    - mysql
+    - ftp
     - postgresql

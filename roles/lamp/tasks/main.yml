@@ -1,0 +1,21 @@
+---
+- name: Instalar Apache
+  ansible.builtin.zypper:
+    name: "{{ apache_package }}"
+    state: present
+
+- name: Habilitar y arrancar el servicio Apache
+  ansible.builtin.systemd:
+    name: "{{ apache_service }}"
+    enabled: yes
+    state: started
+
+- name: Abrir el puerto HTTP en el firewall
+  ansible.posix.firewalld:
+    service: http
+    permanent: yes
+    immediate: yes
+    state: enabled
+
+- name: Configurar PHP y phpMyAdmin
+  ansible.builtin.import_tasks: php.yml

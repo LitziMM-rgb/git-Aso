@@ -1,8 +1,0 @@
----
-samba_package: samba
-samba_service: smb
-samba_user: sambauser
-samba_share_name: compartido
-samba_share_path: /srv/samba/compartido
-samba_create_mask: "0664"
-samba_directory_mask: "0775"
